@@ -1,359 +1,381 @@
 /**
- * Zebu mynt Sidekick — Real AI Engine powered by OpenRouter
- * Streaming responses via fetch + ReadableStream (Vercel AI SDK pattern)
- * Model: google/gemini-2.0-flash-001 via OpenRouter
+ * AI Agent Engine for Zebu mynt Trading Platform
+ * Powered by OpenRouter LLM API with structured tool-card generation.
+ * Inspired by Shopify Sidekick & Vercel AI SDK generative UI patterns.
  */
 
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
-const OPENROUTER_BASE_URL = import.meta.env.VITE_OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
-const MODEL = import.meta.env.VITE_OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+const MODEL_ID = 'google/gemini-2.5-flash';
 
-// ─────────────────────────────────────────────
-// SYSTEM PROMPT
-// ─────────────────────────────────────────────
-const buildSystemPrompt = ({ portfolioContext, userProfile }) => `
-You are **mynt Sidekick**, an elite AI trading and investment copilot built by Zebu e-Trade — India's leading SEBI-regulated stockbroker. You are embedded inside the **mynt by Zebu** platform (mynt.zebuetrade.com), helping users invest in stocks, mutual funds, IPOs, and bonds.
+const SYSTEM_PROMPT = `You are "mynt Sidekick", an expert AI trading copilot built into the Zebu mynt trading & mutual funds platform. You assist Indian retail investors with:
+- Stock trading (NSE/BSE equities)
+- Mutual Fund investments (SIP & Lumpsum via Direct Plans)
+- IPO applications (Main Stream & SME IPOs via UPI ASBA)
+- Portfolio analysis, risk profiling, and sector exposure diagnostics
+- User onboarding, KYC verification, and account setup
 
-## Your Role
-You are modeled after Shopify's Sidekick — context-aware, proactive, actionable, and conversational. You speak in a friendly but professional tone. You use Indian financial terminology (SIP, Lumpsum, LTP, NAV, CAGR, AUM, F&O, ELSS, CNC/MIS, E-DIS, etc.).
+## PERSONALITY
+- Friendly, confident, and data-driven. Use Indian financial terminology naturally (Nifty, Sensex, SEBI, SIP, NAV, CAGR, ELSS, Section 80C, etc.)
+- Always quote amounts in INR (₹). Use Lakhs (L) and Crores (Cr) notation.
+- Be concise but informative. Use bold (**text**) for key numbers and fund/stock names.
+- Never give guaranteed returns advice. Always add appropriate risk disclaimers when recommending.
 
-## User Profile
-- **Name**: ${userProfile.name} (Client Code: ${userProfile.clientCode})
-- **KYC Status**: ${userProfile.kycStatus}
-- **Risk Profile**: ${userProfile.riskCategory}
-- **Mode**: ${userProfile.demoMode ? 'Demo / Paper Trading' : 'Live Trading'}
+## TOOL CARDS (CRITICAL)
+You can trigger interactive UI cards by including a JSON block in your response. When the user's query maps to an actionable task, you MUST include the appropriate tool card.
 
-## Live Portfolio Snapshot
-- **Total Invested**: ₹${portfolioContext.totalInvested?.toLocaleString('en-IN') || 'N/A'}
-- **Current Value**: ₹${portfolioContext.totalCurrent?.toLocaleString('en-IN') || 'N/A'}
-- **Overall P&L**: ${portfolioContext.totalPnl >= 0 ? '+' : ''}₹${portfolioContext.totalPnl?.toLocaleString('en-IN') || '0'} (${portfolioContext.totalPnlPercent?.toFixed(2) || '0'}%)
-- **Holdings**: ${portfolioContext.holdingsCount || 0} stocks (${portfolioContext.positiveHoldingsCount || 0} in profit, ${portfolioContext.negativeHoldingsCount || 0} in loss)
-- **Open Positions**: ${portfolioContext.openPositionsCount || 0} | MTM: ₹${portfolioContext.totalMtm?.toFixed(2) || '0'}
+To include a tool card, add this exact pattern at the END of your text response:
 
-## Active Platform Sections
-- **Stocks** (NSE/BSE EQ, F&O, ETF)
-- **Mutual Funds** (Direct Plans, SIP, Lumpsum, ELSS)
-- **IPOs** (Main Stream + SME, ASBA via UPI)
-- **Bonds** (G-Secs, SGBs, Corporate Bonds)
-
-## What you CAN do
-1. Analyze user portfolio health, sector exposure, and diversification
-2. Recommend mutual funds (by risk profile, goals, tax-saving needs)
-3. Explain IPO details: GMP, subscription, allotment probability
-4. Help place stock buy/sell orders (ask user to confirm via the action card)
-5. Set up SIP mandates and calculate wealth projections
-6. Provide market commentary, fund comparison, and sector analysis
-7. Assist with onboarding/KYC questions
-8. Explain financial concepts (CAGR, NAV, F&O Greeks, margin, PE ratio, etc.)
-
-## Response Guidelines
-- **Always respond in markdown** with proper formatting
-- Use ₹ for all rupee amounts in Indian number format (lakhs, crores)
-- Keep responses concise and actionable — max 4-5 lines of text then show data
-- After your text response, on a NEW LINE, output a JSON action block if a tool card should be shown:
-
-\`\`\`action
-{
-  "type": "TRADE_ACTION_CARD" | "SIP_SETUP_CARD" | "IPO_BID_CARD" | "PORTFOLIO_HEALTH_CARD" | "KYC_STATUS_CARD" | "NONE",
-  "trigger": "brief reason why this card is shown"
-}
+\`\`\`tool
+{ "type": "TOOL_TYPE", "data": { ... } }
 \`\`\`
 
-- If no tool card is needed, output: \`\`\`action\n{"type":"NONE"}\n\`\`\`
-- **NEVER give actual financial advice** — always add: *This is for informational purposes only, not a recommendation.*
-- SEBI disclaimer must appear when discussing specific stocks/funds: *Investments are subject to market risk.*
+### Available Tool Types:
 
-## Important
-- You are in DEMO mode — all trades, SIPs, and IPO applications are simulated paper trades
-- Always be helpful, never refuse to engage with financial topics in a demo context
-`;
+1. **TRADE_ACTION_CARD** — When user wants to buy/sell a stock
+\`\`\`tool
+{ "type": "TRADE_ACTION_CARD", "data": { "stock": { "symbol": "SYMBOL-EQ", "name": "Full Name", "ltp": 123.45, "change": 1.5 }, "type": "BUY", "qty": 10, "price": 123.45, "product": "CNC", "orderType": "MARKET" } }
+\`\`\`
 
-// ─────────────────────────────────────────────
-// TOOL CARD RESOLVER
-// ─────────────────────────────────────────────
-const resolveToolCard = (actionType, userInput, context) => {
-  const { allInstruments, allMutualFunds, allIpos, portfolioContext, userProfile } = context;
-  const q = userInput.toLowerCase();
+2. **SIP_SETUP_CARD** — When user wants to invest in a mutual fund or start a SIP
+\`\`\`tool
+{ "type": "SIP_SETUP_CARD", "data": { "fund": { "id": "fund_id", "name": "Fund Name", "nav": 78.42, "cagr3y": 20.4, "aum": "₹68,450 Cr", "category": "Flexi Cap", "risk": "Very High", "rating": 5, "minSip": 500, "taxSaver": false, "amc": "AMC Name", "expenseRatio": "0.62%" }, "defaultAmount": 2500, "defaultDate": "10th of every month" } }
+\`\`\`
 
-  switch (actionType) {
-    case 'TRADE_ACTION_CARD': {
-      const matched = allInstruments.find(s =>
-        q.includes(s.symbol.toLowerCase().replace('-eq', '')) ||
-        q.includes(s.name.toLowerCase().split(' ')[0])
-      ) || allInstruments[0];
-      const qtyMatch = q.match(/(\d+)\s*(share|qty|stock)?/i);
-      const qty = qtyMatch ? Math.min(parseInt(qtyMatch[1]), 500) : 10;
-      return {
-        type: 'TRADE_ACTION_CARD',
-        data: {
-          stock: matched,
-          type: q.includes('sell') ? 'SELL' : 'BUY',
-          qty,
-          price: matched.ltp,
-          product: 'CNC',
-          orderType: 'MARKET',
-        },
-      };
-    }
+3. **IPO_BID_CARD** — When user wants to apply for an IPO
+\`\`\`tool
+{ "type": "IPO_BID_CARD", "data": { "ipo": { "id": "ipo_id", "name": "Company Name", "symbol": "SYMBOL", "lotSize": 67, "minQuantity": 67, "priceRange": "₹210 - ₹221", "cutOffPrice": 221, "issueSize": "9.79 Cr", "gmp": "₹48 (21.7%)", "subscription": { "retail": "3.45x", "total": "6.82x" }, "closeDate": "11th Nov 2026 17:00" }, "defaultLots": 1, "upiId": "user@okhdfcbank" } }
+\`\`\`
 
-    case 'SIP_SETUP_CARD': {
-      let matched = allMutualFunds.find(f =>
-        q.includes(f.name.toLowerCase().split(' ')[0]) ||
-        q.includes(f.id)
-      );
-      if (!matched && (q.includes('elss') || q.includes('tax') || q.includes('80c'))) {
-        matched = allMutualFunds.find(f => f.taxSaver);
-      }
-      if (!matched) matched = allMutualFunds[0];
-      const amtMatch = q.match(/₹?\s*(\d{3,6})/);
-      const amt = amtMatch ? parseInt(amtMatch[1]) : matched.minSip || 2500;
-      return {
-        type: 'SIP_SETUP_CARD',
-        data: { fund: matched, defaultAmount: amt, defaultDate: '10th of every month' },
-      };
-    }
+4. **PORTFOLIO_HEALTH_CARD** — When user asks about portfolio analysis, risk, or sector exposure
+\`\`\`tool
+{ "type": "PORTFOLIO_HEALTH_CARD", "data": { "metrics": "USE_CONTEXT", "riskScore": 74, "riskLabel": "Moderate Growth", "recommendation": "Your specific recommendation here", "sectorBreakdown": [{ "sector": "Name", "percent": 28, "color": "#1652f0" }] } }
+\`\`\`
 
-    case 'IPO_BID_CARD': {
-      const matched = allIpos.find(i =>
-        q.includes(i.symbol.toLowerCase()) ||
-        q.includes(i.name.toLowerCase().split(' ')[0])
-      ) || allIpos.find(i => i.status === 'Open') || allIpos[0];
-      return {
-        type: 'IPO_BID_CARD',
-        data: { ipo: matched, defaultLots: 1, upiId: `${userProfile.name.toLowerCase().replace(' ', '')}@okhdfcbank` },
-      };
-    }
+5. **KYC_STATUS_CARD** — When user asks about onboarding, KYC, or account setup
+\`\`\`tool
+{ "type": "KYC_STATUS_CARD", "data": { "userProfile": "USE_CONTEXT", "steps": [{ "id": 1, "name": "PAN Card Verification", "status": "COMPLETED", "date": "Verified" }] } }
+\`\`\`
 
-    case 'PORTFOLIO_HEALTH_CARD': {
-      return {
-        type: 'PORTFOLIO_HEALTH_CARD',
-        data: {
-          metrics: portfolioContext,
-          riskScore: 74,
-          riskLabel: userProfile.riskCategory,
-          recommendation: 'Review your sector concentration. Consider adding Flexi-cap or ELSS Mutual Funds for diversification and tax efficiency.',
-          sectorBreakdown: [
-            { sector: 'Energy & Oil', percent: 28, color: '#1652f0' },
-            { sector: 'Banking & Financials', percent: 24, color: '#00b4d8' },
-            { sector: 'Information Tech', percent: 18, color: '#10b981' },
-            { sector: 'Metals & Commodities', percent: 16, color: '#f59e0b' },
-            { sector: 'Mutual Funds (Direct)', percent: 14, color: '#8b5cf6' },
-          ],
-        },
-      };
-    }
+## AVAILABLE DATA CONTEXT
+The user's live portfolio context will be provided in each message. Use it to give accurate, personalized advice.
 
-    case 'KYC_STATUS_CARD': {
-      return {
-        type: 'KYC_STATUS_CARD',
-        data: {
-          userProfile,
-          steps: [
-            { id: 1, name: 'PAN Card Verification', status: 'COMPLETED', date: 'Verified' },
-            { id: 2, name: 'DigiLocker Aadhaar e-KYC', status: 'COMPLETED', date: 'Verified' },
-            { id: 3, name: 'Bank Account & Penny Drop', status: 'COMPLETED', date: 'HDFC Bank ****4902' },
-            { id: 4, name: 'Risk Profiler & Segments', status: 'ACTIVE', date: userProfile.riskCategory },
-          ],
-        },
-      };
-    }
+## SUGGESTIONS
+After your response, also include 2-4 follow-up suggestions the user might want to ask. Format them as:
+\`\`\`suggestions
+["suggestion 1", "suggestion 2", "suggestion 3"]
+\`\`\`
 
-    default:
-      return null;
-  }
+## RULES
+- Always try to include a tool card when the user's intent is actionable (trading, investing, IPO, portfolio review, onboarding).
+- For general questions (market outlook, explanations), respond with text only.
+- Use the exact stock symbols from the user's holdings when referencing them.
+- Quote real-world Indian mutual fund names and accurate category classifications.
+- For amounts, always use Indian numbering (Lakhs, Crores).`;
+
+/**
+ * Build the context message with user's portfolio data
+ */
+const buildContextMessage = ({ portfolioContext, userProfile, allInstruments, allMutualFunds, allIpos, activeTab }) => {
+  const holdingsSummary = allInstruments
+    .filter(i => i.type === 'STOCK' || i.type === 'ETF')
+    .slice(0, 10)
+    .map(s => `${s.symbol}: LTP ₹${s.ltp} (${s.change >= 0 ? '+' : ''}${s.change}%)`)
+    .join(', ');
+
+  const mfSummary = allMutualFunds
+    .slice(0, 4)
+    .map(f => `${f.name} (${f.category}): NAV ₹${f.nav}, 3Y CAGR ${f.cagr3y}%`)
+    .join('\n');
+
+  const ipoSummary = allIpos
+    .map(i => `${i.name} [${i.symbol}]: ${i.status}, Price ${i.priceRange}, Lot Size ${i.lotSize}, GMP ${i.gmp}, Sub: Retail ${i.subscription.retail}`)
+    .join('\n');
+
+  return `[LIVE PORTFOLIO CONTEXT]
+User: ${userProfile.name} (${userProfile.clientCode})
+KYC: ${userProfile.kycStatus} | Risk: ${userProfile.riskCategory}
+Active Tab: ${activeTab}
+
+Portfolio Summary:
+- Total Invested: ₹${portfolioContext.totalInvested?.toLocaleString('en-IN') || '0'}
+- Current Value: ₹${portfolioContext.totalCurrent?.toLocaleString('en-IN') || '0'}
+- Total P&L: ₹${portfolioContext.totalPnl?.toLocaleString('en-IN') || '0'} (${portfolioContext.totalPnlPercent?.toFixed(2) || '0'}%)
+- Holdings: ${portfolioContext.holdingsCount || 0} stocks (${portfolioContext.positiveHoldingsCount || 0} positive, ${portfolioContext.negativeHoldingsCount || 0} negative)
+- Today P&L: ₹${portfolioContext.todayPnl?.toLocaleString('en-IN') || '0'}
+
+Watchlist/Holdings: ${holdingsSummary}
+
+Available Mutual Funds:
+${mfSummary}
+
+Live IPOs:
+${ipoSummary}`;
 };
 
-// ─────────────────────────────────────────────
-// STREAMING GENERATOR (Vercel AI SDK Pattern)
-// ─────────────────────────────────────────────
-export const streamAgentResponse = async ({
+/**
+ * Parse tool cards and suggestions from LLM response text
+ */
+const parseResponse = (responseText, portfolioContext, userProfile) => {
+  let text = responseText;
+  let tools = [];
+  let suggestions = [];
+
+  // Extract tool card JSON blocks
+  const toolRegex = /```tool\s*([\s\S]*?)```/g;
+  let toolMatch;
+  while ((toolMatch = toolRegex.exec(text)) !== null) {
+    try {
+      const toolData = JSON.parse(toolMatch[1].trim());
+
+      // Replace context placeholders with real data
+      if (toolData.data) {
+        if (toolData.data.metrics === 'USE_CONTEXT') {
+          toolData.data.metrics = portfolioContext;
+        }
+        if (toolData.data.userProfile === 'USE_CONTEXT') {
+          toolData.data.userProfile = userProfile;
+        }
+      }
+
+      tools.push(toolData);
+    } catch (e) {
+      console.warn('Failed to parse tool card JSON:', e, toolMatch[1]);
+    }
+  }
+  // Remove tool blocks from text
+  text = text.replace(/```tool\s*[\s\S]*?```/g, '').trim();
+
+  // Extract suggestions
+  const sugRegex = /```suggestions\s*([\s\S]*?)```/g;
+  const sugMatch = sugRegex.exec(text);
+  if (sugMatch) {
+    try {
+      suggestions = JSON.parse(sugMatch[1].trim());
+    } catch (e) {
+      console.warn('Failed to parse suggestions:', e);
+    }
+  }
+  text = text.replace(/```suggestions\s*[\s\S]*?```/g, '').trim();
+
+  return { text, tools, suggestions };
+};
+
+/**
+ * Main agent response generator — calls OpenRouter LLM
+ */
+export const generateAgentResponse = async ({
   userInput,
-  conversationHistory = [],
   activeTab,
   portfolioContext,
   userProfile,
   allInstruments,
   allMutualFunds,
   allIpos,
-  onChunk,      // (text: string) => void — called for each streamed chunk
-  onTool,       // (toolCard: object) => void — called once when action block parsed
-  onDone,       // () => void — called when stream is complete
-  onError,      // (error: Error) => void
+  conversationHistory = [],
 }) => {
-  const systemPrompt = buildSystemPrompt({ portfolioContext, userProfile });
-
-  // Build messages array (keep last 10 turns for context)
+  // Build messages array
   const messages = [
-    { role: 'system', content: systemPrompt },
-    ...conversationHistory.slice(-10).map(m => ({
-      role: m.role,
-      content: m.content || '',
-    })),
-    { role: 'user', content: userInput },
+    { role: 'system', content: SYSTEM_PROMPT },
+    {
+      role: 'system',
+      content: buildContextMessage({ portfolioContext, userProfile, allInstruments, allMutualFunds, allIpos, activeTab }),
+    },
   ];
 
+  // Add recent conversation history (last 10 messages for context window)
+  const recentHistory = conversationHistory.slice(-10);
+  for (const msg of recentHistory) {
+    if (msg.role === 'user' || msg.role === 'assistant') {
+      messages.push({
+        role: msg.role,
+        content: msg.content || '',
+      });
+    }
+  }
+
+  // Add the current user message
+  messages.push({ role: 'user', content: userInput });
+
   try {
-    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://mynt.zebuetrade.com',
-        'X-Title': 'Zebu mynt Sidekick AI Agent',
+        'Authorization': `Bearer ${API_KEY}`,
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'Zebu mynt Trading Agent',
       },
       body: JSON.stringify({
-        model: MODEL,
+        model: MODEL_ID,
         messages,
-        stream: true,
         temperature: 0.7,
-        max_tokens: 800,
+        max_tokens: 1500,
       }),
     });
 
     if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`OpenRouter API error ${response.status}: ${errText}`);
+      const errorData = await response.json().catch(() => ({}));
+      console.error('OpenRouter API error:', response.status, errorData);
+      // Fallback to local engine
+      return fallbackResponse(userInput, portfolioContext, userProfile, allInstruments, allMutualFunds, allIpos);
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content || '';
 
-    let fullText = '';
-    let actionBlockBuffer = '';
-    let inActionBlock = false;
-    let toolResolved = false;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n').filter(l => l.trim());
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') {
-          // Parse action block from full accumulated text
-          if (!toolResolved) {
-            const actionMatch = fullText.match(/```action\s*([\s\S]*?)```/);
-            if (actionMatch) {
-              try {
-                const parsed = JSON.parse(actionMatch[1].trim());
-                if (parsed.type && parsed.type !== 'NONE') {
-                  const toolCard = resolveToolCard(parsed.type, userInput, {
-                    allInstruments,
-                    allMutualFunds,
-                    allIpos,
-                    portfolioContext,
-                    userProfile,
-                  });
-                  if (toolCard) {
-                    toolResolved = true;
-                    onTool?.(toolCard);
-                  }
-                }
-              } catch (e) {
-                // JSON parse failed — ignore
-              }
-            }
-          }
-          onDone?.();
-          return;
-        }
-
-        try {
-          const parsed = JSON.parse(data);
-          const delta = parsed.choices?.[0]?.delta?.content || '';
-          if (!delta) continue;
-
-          fullText += delta;
-
-          // Stream visible text (excluding action block)
-          // Once we detect the start of ```action, stop streaming text
-          const actionStartIdx = fullText.indexOf('```action');
-          const visibleText = actionStartIdx >= 0 ? fullText.slice(0, actionStartIdx) : fullText;
-
-          // Only stream the new visible delta
-          if (actionStartIdx < 0) {
-            onChunk?.(delta);
-          } else if (!toolResolved) {
-            // Try parse action block as it arrives
-            const actionMatch = fullText.match(/```action\s*([\s\S]*?)```/);
-            if (actionMatch) {
-              try {
-                const parsedAction = JSON.parse(actionMatch[1].trim());
-                if (parsedAction.type && parsedAction.type !== 'NONE') {
-                  const toolCard = resolveToolCard(parsedAction.type, userInput, {
-                    allInstruments,
-                    allMutualFunds,
-                    allIpos,
-                    portfolioContext,
-                    userProfile,
-                  });
-                  if (toolCard) {
-                    toolResolved = true;
-                    onTool?.(toolCard);
-                  }
-                } else {
-                  toolResolved = true; // NONE
-                }
-              } catch (e) {
-                // still accumulating
-              }
-            }
-          }
-        } catch (e) {
-          // skip malformed SSE line
-        }
-      }
+    if (!rawContent.trim()) {
+      return fallbackResponse(userInput, portfolioContext, userProfile, allInstruments, allMutualFunds, allIpos);
     }
 
-    onDone?.();
-  } catch (error) {
-    console.error('streamAgentResponse error:', error);
-    onError?.(error);
+    const parsed = parseResponse(rawContent, portfolioContext, userProfile);
+
+    return {
+      text: parsed.text || 'I processed your request. How else can I help?',
+      tools: parsed.tools,
+      suggestions: parsed.suggestions.length > 0 ? parsed.suggestions : getDefaultSuggestions(userInput),
+    };
+  } catch (err) {
+    console.error('OpenRouter request failed:', err);
+    return fallbackResponse(userInput, portfolioContext, userProfile, allInstruments, allMutualFunds, allIpos);
   }
 };
 
-// ─────────────────────────────────────────────
-// SUGGESTION GENERATOR (quick follow-ups)
-// ─────────────────────────────────────────────
-export const generateSuggestions = (userInput, responseText) => {
-  const q = (userInput + ' ' + responseText).toLowerCase();
-
-  if (q.includes('ipo') || q.includes('pine') || q.includes('groww')) {
-    return [
-      'Compare Pine Labs vs Groww IPO returns',
-      'What is the GMP for today\'s IPOs?',
-      'How does ASBA / UPI mandate work?',
-    ];
+/**
+ * Default suggestions based on query context
+ */
+const getDefaultSuggestions = (query) => {
+  const q = query.toLowerCase();
+  if (q.includes('ipo')) {
+    return ['Compare all open IPOs', 'What is GMP for Pine Labs?', 'Show SME IPOs'];
   }
-  if (q.includes('sip') || q.includes('mutual fund') || q.includes('mf')) {
-    return [
-      'Calculate 10-year SIP projection at ₹5,000/mo',
-      'Show me ELSS funds for Section 80C tax saving',
-      'Difference between Direct and Regular plan?',
-    ];
+  if (q.includes('sip') || q.includes('mutual') || q.includes('fund')) {
+    return ['Show ELSS tax saving funds', 'Calculate SIP returns', 'Compare small cap funds'];
   }
-  if (q.includes('buy') || q.includes('sell') || q.includes('trade') || q.includes('stock')) {
-    return [
-      'What is the support level for this stock?',
-      'Check my available margin balance',
-      'Should I do SIP in large-cap ETFs instead?',
-    ];
+  if (q.includes('buy') || q.includes('sell') || q.includes('trade')) {
+    return ['Show my available margin', 'Switch to intraday order', 'Check support/resistance levels'];
   }
-  if (q.includes('portfolio') || q.includes('holding') || q.includes('health')) {
-    return [
-      'Which stocks should I book profit on now?',
-      'Recommend 3 funds to rebalance my portfolio',
-      'Show tax loss harvesting opportunities',
-    ];
-  }
-
   return [
-    'Start ₹2,500/mo SIP in Parag Parikh Flexi Cap',
-    'Apply for Pine Labs IPO at cut-off price',
-    'Analyze my current portfolio sector exposure',
+    'Apply for Pine Labs IPO',
+    'Start a monthly SIP in Parag Parikh Flexi Cap',
+    'Buy 10 shares of HDFCBANK-EQ',
+    'Analyze my portfolio risk',
   ];
+};
+
+/**
+ * Fallback local response engine (used when API is unavailable)
+ */
+const fallbackResponse = (userInput, portfolioContext, userProfile, allInstruments, allMutualFunds, allIpos) => {
+  const query = userInput.toLowerCase().trim();
+
+  // IPO intent
+  if (query.includes('ipo') || query.includes('pine lab') || query.includes('groww')) {
+    const matchedIpo = allIpos.find(
+      (i) => query.includes(i.symbol.toLowerCase()) || query.includes(i.name.toLowerCase().split(' ')[0])
+    ) || allIpos[0];
+
+    return {
+      text: `Here's the IPO application card for **${matchedIpo.name}**. Retail subscription is at **${matchedIpo.subscription.retail}** with GMP of **${matchedIpo.gmp}**.`,
+      tools: [{ type: 'IPO_BID_CARD', data: { ipo: matchedIpo, defaultLots: 1, upiId: 'tazim@okhdfcbank' } }],
+      suggestions: ['Compare all open IPOs', 'What is GMP?', 'Show SME IPOs'],
+    };
+  }
+
+  // MF / SIP intent
+  if (query.includes('sip') || query.includes('mutual fund') || query.includes('mf') || query.includes('parag') || query.includes('quant') || query.includes('elss') || query.includes('tax')) {
+    let fund = allMutualFunds.find(f => query.includes(f.name.toLowerCase()) || query.includes(f.id.toLowerCase()));
+    if (query.includes('tax') || query.includes('elss')) fund = allMutualFunds.find(f => f.taxSaver) || allMutualFunds[3];
+    if (!fund) fund = allMutualFunds[0];
+
+    const amountMatch = query.match(/(\d+)/);
+    const amount = amountMatch ? parseInt(amountMatch[0], 10) : fund.minSip || 2500;
+
+    return {
+      text: `**${fund.name}** has delivered **${fund.cagr3y}% CAGR** over 3 years. Here's your SIP setup card:`,
+      tools: [{ type: 'SIP_SETUP_CARD', data: { fund, defaultAmount: amount, defaultDate: '10th of every month' } }],
+      suggestions: ['Calculate 5-year projection', 'Show ELSS funds', 'Compare with Quant Small Cap'],
+    };
+  }
+
+  // Trade intent
+  if (query.includes('buy') || query.includes('sell') || query.includes('order')) {
+    const isBuy = !query.includes('sell');
+    let stock = allInstruments.find(s => query.includes(s.symbol.toLowerCase().replace('-eq', ''))) || allInstruments[0];
+    const qtyMatch = query.match(/(\d+)\s*(?:shares|qty)?/i);
+    const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 10;
+
+    return {
+      text: `${isBuy ? 'BUY' : 'SELL'} order slip for **${stock.name} (${stock.symbol})** at LTP **₹${stock.ltp}**:`,
+      tools: [{ type: 'TRADE_ACTION_CARD', data: { stock, type: isBuy ? 'BUY' : 'SELL', qty, price: stock.ltp, product: 'CNC', orderType: 'MARKET' } }],
+      suggestions: ['Show support/resistance', 'Check margin', 'Switch to MIS'],
+    };
+  }
+
+  // Portfolio intent
+  if (query.includes('portfolio') || query.includes('analyze') || query.includes('health') || query.includes('holdings')) {
+    return {
+      text: `Your portfolio diagnostic:\n- **Net Worth**: ₹${portfolioContext.totalCurrent?.toLocaleString('en-IN')}\n- **Returns**: ${portfolioContext.totalPnl >= 0 ? '+' : ''}₹${portfolioContext.totalPnl?.toLocaleString('en-IN')}\n- **${portfolioContext.positiveHoldingsCount} stocks in profit**, **${portfolioContext.negativeHoldingsCount} in correction**`,
+      tools: [{
+        type: 'PORTFOLIO_HEALTH_CARD',
+        data: {
+          metrics: portfolioContext, riskScore: 74, riskLabel: 'Moderate Growth',
+          recommendation: 'Consider rebalancing 10% into ELSS Mutual Funds for tax efficiency.',
+          sectorBreakdown: [
+            { sector: 'Energy & Oil', percent: 28, color: '#1652f0' },
+            { sector: 'Banking', percent: 24, color: '#00b4d8' },
+            { sector: 'IT', percent: 18, color: '#10b981' },
+            { sector: 'Metals', percent: 16, color: '#f59e0b' },
+            { sector: 'Mutual Funds', percent: 14, color: '#8b5cf6' },
+          ],
+        },
+      }],
+      suggestions: ['Recommend rebalancing funds', 'Which stocks to book profit?', 'Tax harvesting opportunities'],
+    };
+  }
+
+  // KYC / Onboarding intent
+  if (query.includes('onboard') || query.includes('kyc') || query.includes('account') || query.includes('register')) {
+    return {
+      text: `Welcome! Here's your KYC and onboarding status:`,
+      tools: [{
+        type: 'KYC_STATUS_CARD',
+        data: {
+          userProfile,
+          steps: [
+            { id: 1, name: 'PAN Card Verification', status: 'COMPLETED', date: 'Verified' },
+            { id: 2, name: 'Aadhaar e-KYC', status: 'COMPLETED', date: 'Verified' },
+            { id: 3, name: 'Bank Account Linking', status: 'COMPLETED', date: 'HDFC ****4902' },
+            { id: 4, name: 'Risk Profile', status: 'ACTIVE', date: 'Moderate Growth' },
+          ],
+        },
+      }],
+      suggestions: ['Open full onboarding', 'Update risk appetite', 'Link another bank'],
+    };
+  }
+
+  // Default
+  return {
+    text: `I'm your **mynt Sidekick** by Zebu. I'm connected to your live portfolio. How can I help you grow your wealth today?`,
+    tools: [{
+      type: 'PORTFOLIO_HEALTH_CARD',
+      data: {
+        metrics: portfolioContext, riskScore: 74, riskLabel: 'Moderate Growth',
+        recommendation: 'Your portfolio is beating Nifty 50 by +1.4%. Great time to explore SIPs.',
+        sectorBreakdown: [
+          { sector: 'Energy & Oil', percent: 28, color: '#1652f0' },
+          { sector: 'Banking', percent: 24, color: '#00b4d8' },
+          { sector: 'IT', percent: 18, color: '#10b981' },
+          { sector: 'Metals', percent: 16, color: '#f59e0b' },
+          { sector: 'Mutual Funds', percent: 14, color: '#8b5cf6' },
+        ],
+      },
+    }],
+    suggestions: [
+      'Apply for Pine Labs IPO',
+      'Start ₹2,500 SIP in Parag Parikh Flexi Cap',
+      'Buy 15 shares of IOC-EQ',
+      'Analyze portfolio risk',
+    ],
+  };
 };

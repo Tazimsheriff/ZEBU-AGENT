@@ -1,109 +1,89 @@
-# Zebu mynt — AI Trading & Mutual Funds Agent
+# Zebu mynt | AI Trading & Mutual Funds Platform (Shopify Sidekick Style)
 
-> 🚀 A **Shopify Sidekick-inspired** AI trading copilot for **Zebu e-Trade's mynt platform**, built with React + Vite + OpenRouter (Gemini 2.0 Flash).
-
-![Zebu mynt Demo](https://mynt.zebuetrade.com/assets/logo.png)
-
-## ✨ Features
-
-| Feature | Description |
-|---|---|
-| 🤖 **Sidekick AI Agent** | Streaming LLM responses via OpenRouter — real conversation with memory |
-| 📊 **Stocks Dashboard** | Holdings, Positions, Orders, Margins widgets matching `mynt.zebuetrade.com` |
-| 💰 **Mutual Funds Hub** | Fund explorer with live SIP slider, wealth projection calculator, ELSS filter |
-| 🚀 **IPO Desk** | Pine Labs, Groww, Physicswallah IPOs with GMP, subscription data & UPI ASBA apply |
-| 📱 **Mobile App Simulator** | Pixel-perfect iPhone mockup of the mynt iOS app |
-| ⚡ **Generative UI Tool Cards** | TradeActionCard, SipSetupCard, IpoBidCard, PortfolioHealthCard injected live into chat |
-| 🧠 **Context-Aware AI** | AI knows your live portfolio P&L, holdings count, risk profile & active tab |
-| 🎯 **Live Market Simulation** | Holdings and indices auto-tick every 3.5 seconds |
-| 🪄 **Instant Onboarding** | 5-step KYC wizard (PAN → Aadhaar → Details → Bank → Risk Profile) |
-
-## 🛠 Tech Stack
-
-- **Frontend**: React 18 + Vite 6
-- **Styling**: Tailwind CSS 3 with custom Zebu design tokens
-- **AI**: OpenRouter API (streaming, Vercel AI SDK pattern) — default: `google/gemini-2.0-flash-001`
-- **Icons**: Lucide React
-- **Animations**: canvas-confetti for order execution celebrations
-
-## 🚀 Quick Start
-
-```bash
-# 1. Clone the repo
-git clone https://github.com/Tazimsheriff/ZEBU-AGENT.git
-cd ZEBU-AGENT
-
-# 2. Install dependencies
-npm install
-
-# 3. Configure environment
-cp .env.example .env
-# Edit .env and add your OpenRouter API key from https://openrouter.ai
-
-# 4. Start dev server
-npm run dev
-# → http://localhost:3000
-```
-
-## 🤖 AI Agent — How It Works
-
-The **mynt Sidekick** is built using the **Vercel AI SDK streaming pattern** adapted for vanilla `fetch`:
-
-```
-User Input → OpenRouter API (streaming SSE)
-           → Character-by-character text streaming
-           → ```action block detection
-           → Tool card injection (SIP, Trade, IPO, Portfolio, KYC)
-           → Follow-up suggestions generated
-```
-
-### Supported Natural Language Commands:
-- *"Apply for Pine Labs IPO at cut-off price"* → IPO Bid Card
-- *"Start ₹2,500/mo SIP in Parag Parikh Flexi Cap"* → SIP Setup Card
-- *"Buy 20 shares of IOC-EQ at market"* → Trade Action Card
-- *"Analyze my portfolio health and sector exposure"* → Portfolio Health Card
-- *"Complete my KYC verification"* → KYC Status Card
-
-## 📁 Project Structure
-
-```
-src/
-├── context/
-│   ├── TradingContext.jsx    # Global state — orders, holdings, SIPs, IPOs
-│   └── AgentContext.jsx      # Sidekick streaming chat state
-├── utils/
-│   ├── aiAgentEngine.js      # OpenRouter streaming engine + tool resolver
-│   └── formatters.js         # INR, percent, date formatters
-├── data/
-│   ├── mockHoldings.js       # IOC, TRIDENT, IDFC, GOLDBEES + 9 more
-│   ├── mockMutualFunds.js    # Parag Parikh, Quant Small Cap, SBI ELSS etc.
-│   ├── mockIpos.js           # Pine Labs, Groww, Physicswallah IPOs
-│   └── mockMarketData.js     # Nifty 50, Sensex, Bank Nifty live ticks
-├── components/
-│   ├── common/Header.jsx     # Nav + live indices ticker
-│   ├── desktop/              # StocksDashboard, MutualFundsDesk, IpoDesk
-│   ├── mobile/               # iPhone frame simulator
-│   ├── sidekick/             # AI chat panel + 5 generative tool cards
-│   └── onboarding/           # 5-step KYC wizard
-└── App.jsx                   # Root with view toggle + notification toasts
-```
-
-## ⚙️ Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `VITE_OPENROUTER_API_KEY` | ✅ Yes | Your OpenRouter API key |
-| `VITE_OPENROUTER_BASE_URL` | No | Defaults to `https://openrouter.ai/api/v1` |
-| `VITE_OPENROUTER_MODEL` | No | Defaults to `google/gemini-2.0-flash-001` |
-
-## 📜 Disclaimer
-
-> *This is a demo/prototype application. All portfolio data, stock prices, mutual fund NAVs, and IPO details are simulated for demonstration purposes only. This is NOT financial advice. Securities quoted are exemplary and not recommendatory. Investments are subject to market risk.*
-
-## 🏢 About Zebu
-
-[Zebu e-Trade](https://zebuetrade.com) is a SEBI-registered Indian stockbroker. [mynt by Zebu](https://mynt.zebuetrade.com) is their flagship trading platform for stocks, mutual funds, IPOs, and bonds.
+An intelligent, interactive AI-powered trading copilot and mutual funds platform inspired by **Shopify Sidekick** and built using **Vercel AI SDK generative UI patterns** for **Zebu's `mynt`** trading ecosystem.
 
 ---
 
-Built with ❤️ as an AI agent demo for Zebu mynt platform.
+## 🌟 Highlights & Features
+
+- **Shopify Sidekick Style Copilot ("mynt Sidekick")**:
+  - Context-aware floating and dockable conversational AI assistant.
+  - Generative UI: Direct interactive order slips, SIP configuration cards, IPO ASBA bidding tickets, and portfolio health diagnostics.
+  - Multi-turn conversation reasoning with real-time portfolio metrics injection.
+  - Powered by **OpenRouter API** (`google/gemini-2.5-flash`) with automated fallback to domain engine.
+
+- **Desktop Web Portal (`mynt.zebuetrade.com/stocks`)**:
+  - **Holdings Overview**: Visual distribution bar (Positive/Negative counts), invested vs current value, today's P&L.
+  - **Positions & MTM Desk**: Real-time MTM tracking and intraday position monitoring.
+  - **Orders & Margins**: Live order execution book, available margin calculations, credit utilization.
+
+- **Mutual Funds Hub (`mynt.zebuetrade.com/mutual-funds`)**:
+  - Curated direct-plan funds with 1Y/3Y/5Y CAGR benchmarks, AUM, and riskometer ratings.
+  - Instant SIP setup with 3-year compound wealth projection sliders.
+  - Section 80C ELSS Tax Saver recommendations.
+
+- **IPO Application Desk (`mynt.zebuetrade.com/ipo`)**:
+  - Main Stream & SME IPO categorization with live GMP and subscription figures.
+  - Pine Labs, Groww, and SME IPO bidding modal matching official Zebu mynt UI.
+  - 1-click UPI ASBA mandate registration.
+
+- **Mobile App Simulator**:
+  - Pixel-accurate replica of the Zebu mynt iOS mobile app.
+  - Positions & Holdings tabs with Today vs Total P&L toggles.
+
+- **Interactive User Onboarding**:
+  - Instant KYC checklist (PAN, Aadhaar e-Sign, Bank Penny Drop, Risk Profiler).
+  - Pre-funded paper trading demo account.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 19, Vite 6
+- **Styling**: Tailwind CSS 3.4, Custom Glassmorphism & Micro-animations
+- **AI & LLM**: OpenRouter API (`google/gemini-2.5-flash`), Vercel AI SDK Generative UI architecture
+- **State Management**: React Context (`TradingContext`, `AgentContext`)
+- **Icons & Effects**: Lucide React, Canvas Confetti
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/Tazimsheriff/ZEBU-AGENT.git
+cd ZEBU-AGENT
+```
+
+### 2. Install dependencies
+```bash
+npm install
+```
+
+### 3. Configure API Key
+Create a `.env` file from `.env.example`:
+```env
+VITE_OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+### 4. Start Development Server
+```bash
+npm run dev
+```
+Open `http://localhost:3000` in your browser.
+
+---
+
+## 📸 Example Sidekick Prompts
+
+- *"Apply for Pine Labs IPO (Cut-off price)"*
+- *"Start a ₹2,500 monthly SIP in Parag Parikh Flexi Cap"*
+- *"What ELSS funds can I invest in to save tax under 80C?"*
+- *"Buy 20 shares of IOC-EQ @ Market price"*
+- *"Analyze my portfolio risk and sector exposure"*
+- *"Check my KYC onboarding status"*
+
+---
+
+## 📄 License
+MIT License

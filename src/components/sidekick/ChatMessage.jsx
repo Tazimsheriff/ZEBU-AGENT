@@ -8,10 +8,6 @@ import { KycStatusCard } from './ToolCards/KycStatusCard';
 
 export const ChatMessage = ({ message, onSuggestionClick }) => {
   const isAssistant = message.role === 'assistant';
-  const isStreaming = message.streaming;
-
-  // Strip action code block from visible output
-  const cleanContent = (message.content || '').replace(/```action[\s\S]*?```/g, '').trim();
 
   const renderToolCard = (tool, idx) => {
     switch (tool.type) {
@@ -77,10 +73,7 @@ export const ChatMessage = ({ message, onSuggestionClick }) => {
               : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md rounded-tr-sm'
           }`}
         >
-          {formatContent(cleanContent)}
-          {isStreaming && (
-            <span className="inline-block w-0.5 h-3.5 bg-blue-600 rounded-full ml-0.5 animate-pulse align-middle" />
-          )}
+          {formatContent(message.content)}
         </div>
 
         {/* Generative Tool Output Cards */}
