@@ -275,19 +275,18 @@ const FundsPage = () => {
 };
 
 function App() {
-  const { viewMode } = useTrading();
+  const { isMobile } = useTrading();
 
   return (
     <div className="min-h-screen bg-[#f0f4f9]">
-      <Header />
-
-      {viewMode === 'desktop' ? (
+      {isMobile ? (
+        <MobileAppShell />
+      ) : (
         <>
+          <Header />
           <DesktopContent />
           <SidekickAgent embedded={false} />
         </>
-      ) : (
-        <MobileAppShell />
       )}
 
       <OnboardingFlow />

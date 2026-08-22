@@ -53,67 +53,58 @@ export const MobileAppShell = () => {
   };
 
   return (
-    <div className="flex flex-col items-center py-6 px-4 max-w-xl mx-auto space-y-6 pb-16">
-      {/* 1. Phone Frame */}
-      <div className="relative w-[340px] h-[680px] bg-black rounded-[42px] phone-shadow overflow-hidden flex flex-col shrink-0">
-        {/* Notch / Dynamic Island */}
-        <div className="relative bg-[#05234e] pt-2 pb-0">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-b-2xl z-10" />
-          {/* Status bar */}
-          <div className="flex justify-between items-center px-6 py-1 text-white text-[10px] font-medium">
-            <span>5:00</span>
-            <div className="flex items-center gap-1">
-              <span>●●●●</span>
-              <span>📶</span>
-              <span>🔋</span>
-            </div>
+    <div className="w-full max-w-lg mx-auto min-h-screen bg-white shadow-2xl flex flex-col pb-20 relative">
+      {/* Top Status & Header Bar */}
+      <div className="bg-[#05234e] text-white pt-3 pb-0 sticky top-0 z-30 shadow-md">
+        {/* Status bar */}
+        <div className="flex justify-between items-center px-4 py-1 text-white/90 text-[11px] font-medium">
+          <span>5:00</span>
+          <div className="flex items-center gap-1.5">
+            <span>●●●●</span>
+            <span>5G</span>
+            <span>100% 🔋</span>
           </div>
-        </div>
-
-        {/* App Content */}
-        <div className="flex-1 overflow-y-auto bg-white">
-          {renderContent()}
-        </div>
-
-        {/* Bottom Nav */}
-        <div className="bg-white border-t border-slate-200 flex items-center justify-around py-2 shrink-0">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = mobileTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setMobileTab(tab.id)}
-                className={`flex flex-col items-center gap-0.5 px-2 py-0.5 transition-colors ${
-                  isActive ? 'text-blue-600' : 'text-slate-400'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span className={`text-[9px] font-semibold ${isActive ? 'text-blue-600' : 'text-slate-400'}`}>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Home indicator */}
-        <div className="bg-white flex justify-center py-1.5 shrink-0">
-          <div className="w-24 h-1 bg-slate-800 rounded-full" />
         </div>
       </div>
 
-      {/* 2. Sidekick Agent directly under the phone screen */}
-      <div className="w-full max-w-[360px] space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            <span>mynt Sidekick Copilot</span>
+      {/* Main Tab Content (Portfolio, Watchlist, Orders, Profile) */}
+      <div className="flex-1 overflow-y-auto">
+        {renderContent()}
+
+        {/* Sidekick Agent integrated directly into the mobile flow below the portfolio */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 mt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
+              <Sparkles className="w-4 h-4 text-blue-600" />
+              <span>mynt Sidekick AI Copilot</span>
+            </div>
+            <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded-full">
+              Live Connected
+            </span>
           </div>
-          <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-            Connected to App
-          </span>
+          <SidekickAgent embedded={true} />
         </div>
-        <SidekickAgent embedded={true} />
+      </div>
+
+      {/* Fixed Native Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-slate-200 flex items-center justify-around py-2.5 z-40 shadow-lg">
+        {tabs.map(tab => {
+          const Icon = tab.icon;
+          const isActive = mobileTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setMobileTab(tab.id)}
+              className={`flex flex-col items-center gap-0.5 px-3 py-0.5 transition-colors ${
+                isActive ? 'text-blue-600' : 'text-slate-400'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span className={`text-[10px] font-semibold ${isActive ? 'text-blue-600' : 'text-slate-400'}`}>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

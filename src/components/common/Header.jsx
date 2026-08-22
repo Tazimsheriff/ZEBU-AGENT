@@ -1,9 +1,9 @@
 import React from 'react';
 import { useTrading } from '../../context/TradingContext';
-import { TrendingUp, TrendingDown, Search, Bell, Monitor, Smartphone } from 'lucide-react';
+import { TrendingUp, TrendingDown, Search, Bell } from 'lucide-react';
 
 export const Header = () => {
-  const { indices, activeTab, setActiveTab, viewMode, setViewMode, userProfile, notifications } = useTrading();
+  const { indices, activeTab, setActiveTab, userProfile, notifications } = useTrading();
 
   const tabs = [
     { id: 'stocks', label: 'Stocks' },
@@ -66,26 +66,6 @@ export const Header = () => {
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* View Toggle */}
-          <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
-            <button
-              type="button"
-              onClick={() => setViewMode('desktop')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'desktop' ? 'bg-white shadow-sm text-blue-700' : 'text-slate-500'}`}
-              title="Desktop Web View"
-            >
-              <Monitor className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('mobile')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'mobile' ? 'bg-white shadow-sm text-blue-700' : 'text-slate-500'}`}
-              title="Mobile App Simulator"
-            >
-              <Smartphone className="w-4 h-4" />
-            </button>
-          </div>
-
           {/* Search */}
           <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
             <Search className="w-4 h-4" />

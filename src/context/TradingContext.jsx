@@ -8,9 +8,24 @@ import { mutualFundsList } from '../data/mockMutualFunds';
 const TradingContext = createContext();
 
 export const TradingProvider = ({ children }) => {
+  // Auto-detect mobile vs desktop layout
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 840;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 840);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Navigation & View
   const [activeTab, setActiveTab] = useState('stocks'); // 'stocks' | 'mutualfunds' | 'ipos' | 'positions' | 'holdings' | 'orders' | 'funds'
-  const [viewMode, setViewMode] = useState('desktop'); // 'desktop' | 'mobile'
   const [mobileTab, setMobileTab] = useState('portfolio'); // 'watchlist' | 'orders' | 'portfolio' | 'profile' | 'more'
   const [mobilePortfolioSubTab, setMobilePortfolioSubTab] = useState('holdings'); // 'holdings' | 'positions'
   const [mobileHoldingsTimeframe, setMobileHoldingsTimeframe] = useState('today'); // 'today' | 'total'
@@ -350,10 +365,9 @@ export const TradingProvider = ({ children }) => {
   return (
     <TradingContext.Provider
       value={{
+        isMobile,
         activeTab,
         setActiveTab,
-        viewMode,
-        setViewMode,
         mobileTab,
         setMobileTab,
         mobilePortfolioSubTab,
