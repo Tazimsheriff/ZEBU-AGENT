@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useTrading } from '../../context/TradingContext';
 import { useAgent } from '../../context/AgentContext';
 import { ChatMessage } from './ChatMessage';
 import {
