@@ -18,9 +18,14 @@ export const AgentProvider = ({ children }) => {
     addNotification,
   } = useTrading();
 
-  // Sidekick drawer UI state
-  const [isOpen, setIsOpen] = useState(true); // Open by default for demo WOW factor
-  const [isDocked, setIsDocked] = useState(false); // Floating vs side-by-side docked
+  // Sidekick drawer UI state (closed as floating FAB on mobile, open panel on desktop)
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 840;
+    }
+    return false;
+  });
+  const [isDocked, setIsDocked] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
 
   // Initial welcome message with interactive tool card

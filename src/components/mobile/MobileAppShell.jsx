@@ -1,8 +1,7 @@
 import React from 'react';
 import { useTrading } from '../../context/TradingContext';
 import { MobilePortfolio } from './MobilePortfolio';
-import { SidekickAgent } from '../sidekick/SidekickAgent';
-import { TrendingUp, FileText, Briefcase, User, MoreHorizontal, Sparkles } from 'lucide-react';
+import { TrendingUp, FileText, Briefcase, User, MoreHorizontal } from 'lucide-react';
 
 export const MobileAppShell = () => {
   const { mobileTab, setMobileTab } = useTrading();
@@ -68,22 +67,8 @@ export const MobileAppShell = () => {
       </div>
 
       {/* Main Tab Content (Portfolio, Watchlist, Orders, Profile) */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-6">
         {renderContent()}
-
-        {/* Sidekick Agent integrated directly into the mobile flow below the portfolio */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 mt-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span>mynt Sidekick AI Copilot</span>
-            </div>
-            <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded-full">
-              Live Connected
-            </span>
-          </div>
-          <SidekickAgent embedded={true} />
-        </div>
       </div>
 
       {/* Fixed Native Bottom Navigation */}

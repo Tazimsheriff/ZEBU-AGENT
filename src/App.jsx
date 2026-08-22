@@ -285,10 +285,11 @@ function App() {
         <>
           <Header />
           <DesktopContent />
-          <SidekickAgent embedded={false} />
         </>
       )}
 
+      {/* Sidekick Copilot: Floating FAB + Bottom Sheet on Mobile, Floating Panel on Desktop */}
+      <SidekickAgent />
       <OnboardingFlow />
     </div>
   );
