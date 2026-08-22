@@ -5,7 +5,23 @@
  */
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+export const getApiKey = () => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const stored = window.localStorage.getItem('openrouter_api_key');
+    if (stored && stored.trim()) return stored.trim();
+  }
+  return import.meta.env.VITE_OPENROUTER_API_KEY || '';
+};
+
+export const setApiKey = (key) => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    if (key) {
+      window.localStorage.setItem('openrouter_api_key', key);
+    } else {
+      window.localStorage.removeItem('openrouter_api_key');
+    }
+  }
+};
 const MODEL_ID = 'google/gemini-2.5-flash';
 
 const SYSTEM_PROMPT = `You are "mynt Sidekick", an expert AI trading copilot built into the Zebu mynt trading & mutual funds platform. You assist Indian retail investors with:
@@ -198,12 +214,16 @@ export const generateAgentResponse = async ({
   messages.push({ role: 'user', content: userInput });
 
   try {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      return fallbackResponse(userInput, portfolioContext, userProfile, allInstruments, allMutualFunds, allIpos);
+    }
     const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
-        'HTTP-Referer': window.location.origin,
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://zebu.in',
         'X-Title': 'Zebu mynt Trading Agent',
       },
       body: JSON.stringify({

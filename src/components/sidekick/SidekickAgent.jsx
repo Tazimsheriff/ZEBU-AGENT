@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useAgent } from '../../context/AgentContext';
 import { ChatMessage } from './ChatMessage';
+import { getApiKey, setApiKey } from '../../utils/aiAgentEngine';
 import {
   X, Minus, Maximize2, Send, Trash2, Sparkles, Bot, MessageCircle,
-  ArrowRight
+  ArrowRight, Key, Settings, Check
 } from 'lucide-react';
 
 export const SidekickAgent = () => {
@@ -11,6 +12,24 @@ export const SidekickAgent = () => {
     isOpen, setIsOpen, isThinking, messages,
     inputQuery, setInputQuery, sendMessage, clearChat,
   } = useAgent();
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [keySaved, setKeySaved] = useState(false);
+
+  useEffect(() => {
+    setApiKeyInput(getApiKey());
+  }, [settingsOpen]);
+
+  const handleSaveKey = (e) => {
+    e.preventDefault();
+    setApiKey(apiKeyInput.trim());
+    setKeySaved(true);
+    setTimeout(() => {
+      setKeySaved(false);
+      setSettingsOpen(false);
+    }, 1200);
+  };
 
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
@@ -22,10 +41,10 @@ export const SidekickAgent = () => {
   }, [messages, isThinking]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && !settingsOpen) {
       inputRef.current.focus();
     }
-  }, [isOpen]);
+  }, [isOpen, settingsOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -66,6 +85,14 @@ export const SidekickAgent = () => {
         <div className="flex items-center gap-1">
           <button
             type="button"
+            onClick={() => setSettingsOpen(!settingsOpen)}
+            className={`p-1.5 rounded-lg transition-colors ${settingsOpen ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70'}`}
+            title="AI Settings & API Key"
+          >
+            <Key className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
             onClick={clearChat}
             className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
             title="Clear chat"
@@ -82,6 +109,36 @@ export const SidekickAgent = () => {
           </button>
         </div>
       </div>
+
+      {/* Settings Panel if open */}
+      {settingsOpen && (
+        <div className="p-3 bg-slate-900 text-white border-b border-slate-800 text-xs space-y-2 animate-in">
+          <div className="flex items-center justify-between">
+            <span className="font-bold flex items-center gap-1.5 text-[11px] text-cyan-400">
+              <Key className="w-3.5 h-3.5" /> OpenRouter API Key
+            </span>
+            <span className="text-[10px] text-slate-400">Model: Gemini 2.5 Flash</span>
+          </div>
+          <form onSubmit={handleSaveKey} className="flex gap-2">
+            <input
+              type="password"
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder="sk-or-v1-..."
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"
+            />
+            <button
+              type="submit"
+              className="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-colors flex items-center gap-1"
+            >
+              {keySaved ? <Check className="w-3.5 h-3.5" /> : 'Save'}
+            </button>
+          </form>
+          <p className="text-[9px] text-slate-400">
+            Keys are saved locally in your browser storage and never sent to our servers.
+          </p>
+        </div>
+      )}
 
       {/* Context Bar */}
       <div className="px-4 py-1.5 bg-blue-50/80 border-b border-blue-100 flex items-center gap-2 text-[10px] text-blue-700 font-medium shrink-0">
