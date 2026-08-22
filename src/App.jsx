@@ -282,12 +282,14 @@ function App() {
       <Header />
 
       {viewMode === 'desktop' ? (
-        <DesktopContent />
+        <>
+          <DesktopContent />
+          <SidekickAgent embedded={false} />
+        </>
       ) : (
         <MobileAppShell />
       )}
 
-      <SidekickAgent />
       <OnboardingFlow />
     </div>
   );

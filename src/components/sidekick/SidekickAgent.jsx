@@ -5,7 +5,7 @@ import {
   X, Send, Trash2, Sparkles, Bot, MessageCircle,
 } from 'lucide-react';
 
-export const SidekickAgent = () => {
+export const SidekickAgent = ({ embedded = false }) => {
   const {
     isOpen, setIsOpen, isThinking, messages,
     inputQuery, setInputQuery, sendMessage, clearChat,
@@ -35,8 +35,8 @@ export const SidekickAgent = () => {
     sendMessage(text);
   };
 
-  // Floating FAB button when closed
-  if (!isOpen) {
+  // Floating FAB button when closed (only for non-embedded view)
+  if (!isOpen && !embedded) {
     return (
       <button
         type="button"
@@ -49,8 +49,12 @@ export const SidekickAgent = () => {
     );
   }
 
+  const containerClasses = embedded
+    ? "w-full h-[580px] flex flex-col bg-white rounded-3xl shadow-xl shadow-blue-900/10 border border-slate-200 overflow-hidden"
+    : "fixed bottom-4 right-4 z-50 w-[420px] h-[calc(100vh-100px)] max-h-[720px] flex flex-col sidekick-glass rounded-3xl shadow-2xl shadow-blue-900/15 border border-slate-200/60 overflow-hidden animate-in";
+
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[420px] h-[calc(100vh-100px)] max-h-[720px] flex flex-col sidekick-glass rounded-3xl shadow-2xl shadow-blue-900/15 border border-slate-200/60 overflow-hidden animate-in">
+    <div className={containerClasses}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[#05234e] to-[#0a3a7a] text-white shrink-0">
         <div className="flex items-center gap-2.5">

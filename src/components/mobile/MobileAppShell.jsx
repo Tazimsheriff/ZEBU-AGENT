@@ -1,7 +1,8 @@
 import React from 'react';
 import { useTrading } from '../../context/TradingContext';
 import { MobilePortfolio } from './MobilePortfolio';
-import { TrendingUp, FileText, Briefcase, User, MoreHorizontal } from 'lucide-react';
+import { SidekickAgent } from '../sidekick/SidekickAgent';
+import { TrendingUp, FileText, Briefcase, User, MoreHorizontal, Sparkles } from 'lucide-react';
 
 export const MobileAppShell = () => {
   const { mobileTab, setMobileTab } = useTrading();
@@ -52,9 +53,9 @@ export const MobileAppShell = () => {
   };
 
   return (
-    <div className="flex items-center justify-center py-8 px-4">
-      {/* Phone Frame */}
-      <div className="relative w-[320px] h-[660px] bg-black rounded-[40px] phone-shadow overflow-hidden flex flex-col">
+    <div className="flex flex-col items-center py-6 px-4 max-w-xl mx-auto space-y-6 pb-16">
+      {/* 1. Phone Frame */}
+      <div className="relative w-[340px] h-[680px] bg-black rounded-[42px] phone-shadow overflow-hidden flex flex-col shrink-0">
         {/* Notch / Dynamic Island */}
         <div className="relative bg-[#05234e] pt-2 pb-0">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-b-2xl z-10" />
@@ -99,6 +100,20 @@ export const MobileAppShell = () => {
         <div className="bg-white flex justify-center py-1.5 shrink-0">
           <div className="w-24 h-1 bg-slate-800 rounded-full" />
         </div>
+      </div>
+
+      {/* 2. Sidekick Agent directly under the phone screen */}
+      <div className="w-full max-w-[360px] space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
+            <Sparkles className="w-4 h-4 text-blue-600" />
+            <span>mynt Sidekick Copilot</span>
+          </div>
+          <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+            Connected to App
+          </span>
+        </div>
+        <SidekickAgent embedded={true} />
       </div>
     </div>
   );
