@@ -4,13 +4,21 @@
  * Inspired by Shopify Sidekick & Vercel AI SDK generative UI patterns.
  */
 
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_API_URL =
+  import.meta.env.OPENROUTER_BASE_URL ||
+  import.meta.env.VITE_OPENROUTER_BASE_URL ||
+  'https://openrouter.ai/api/v1/chat/completions';
+
 export const getApiKey = () => {
   if (typeof window !== 'undefined' && window.localStorage) {
     const stored = window.localStorage.getItem('openrouter_api_key');
     if (stored && stored.trim()) return stored.trim();
   }
-  return import.meta.env.VITE_OPENROUTER_API_KEY || '';
+  return (
+    import.meta.env.OPENROUTER_API_KEY ||
+    import.meta.env.VITE_OPENROUTER_API_KEY ||
+    ''
+  );
 };
 
 export const setApiKey = (key) => {
@@ -22,7 +30,11 @@ export const setApiKey = (key) => {
     }
   }
 };
-const MODEL_ID = 'google/gemini-2.5-flash';
+
+const MODEL_ID =
+  import.meta.env.OPENROUTER_MODEL ||
+  import.meta.env.VITE_OPENROUTER_MODEL ||
+  'google/gemini-2.5-flash';
 
 const SYSTEM_PROMPT = `You are "mynt Sidekick", an expert AI trading copilot built into the Zebu mynt trading & mutual funds platform. You assist Indian retail investors with:
 - Stock trading (NSE/BSE equities)
